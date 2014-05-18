@@ -6,12 +6,19 @@ An set of functions extending emacs vhdl-mode.el as an alternative to electric m
 Interactive Functions:-
 
   vh-procedure        Insert a procedure template
+  
   vh-function         Insert a function template
+  
   vh-process-async    Insert an asynchronous process template
+  
   vh-process-sync     Insert an asynchronous process template
+  
   vh-process-del      Delete a process
+  
   vh-sm               Insert a state machine template 
+  
   vh-sm-add           Adds states to a state machine template
+  
   vh-sm-del           Deletes states from a state machine template, or the whole template if none specified
   
 
@@ -19,6 +26,7 @@ Known bugs and limitations:-
 
 Only upper case keywords are currently supported
 CASE statements within state output or transtion clauses will screw up vh-sm-add and vh-sm-del
+
 
 Why?
 
