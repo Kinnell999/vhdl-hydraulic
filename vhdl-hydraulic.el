@@ -57,7 +57,7 @@
 "Inserts a procedure template in the current buffer at point"
   (interactive "sLabel: ")
   (save-excursion
-    (vh-insert 1
+    (vh-insert 0
 	       (vh-header (if vh-procedure-header vh-procedure-header vh-default-header)
 			  (list (cons "%label%" label)
 				(cons "%comment%" (if comment comment ""))))
@@ -70,7 +70,7 @@
 "Inserts a function template in the current buffer at point"
   (interactive "sLabel: ")
   (save-excursion
-    (vh-insert 1
+    (vh-insert 0
 	       (vh-header (if vh-function-header vh-function-header vh-default-header)
 			  (list (cons "%label%" label)
 				(cons "%comment%" (if comment comment ""))))
@@ -82,7 +82,8 @@
 (defun vh-process-async (label &optional async-clause s-list comment)
 "Inserts an asynchronous process template in the current buffer at point"
   (interactive "sLabel: ")
-  (vh-insert 1 
+  (beginning-of-line)
+  (vh-insert 1
 	     (vh-header vh-process-header
 			(list (cons "%label%" label)
 			      (cons "%comment%" (if comment comment ""))))
@@ -136,16 +137,17 @@
   (let ((states (split-string str)))
     (save-excursion
       (goto-char (point-min))
-      (if (re-search-forward "^ *ARCHITECTURE.*OF.*IS *$")
-	  (vh-insert 1 ""
-		       ""
+      (if (re-search-forward "^\\W*ARCHITECTURE\\W.+\\WOF\\W.+\\WIS\\W*$")
+	  (progn 
+	    (forward-char)
+	    (vh-insert 1 ""
 		       (concat "TYPE state_type IS (" (mapconcat 'identity states ", ") ");")
 		       ""
 		       "SIGNAL state      : state_type;"
 		       "SIGNAL next_state : state_type;"
-		       ""))
+		       "")))
       (goto-char (point-max))
-      (if (re-search-backward "^ *END ARCHITECTURE")
+      (if (re-search-backward "^\\W*END\\W+ARCHITECTURE")
 	  (progn 
 	    (vh-process-sync "state_register" 
 			     (concat "state <= " (car states) ";")
@@ -244,9 +246,14 @@ by level*vhdl-basic-offset.  Each string argument is considered a seperate line.
 		"\n")))
 
 (defmacro vh-insert (level &rest text-list)
-  "Inserts a list of lines, and indents each by level*vhdl-basic-offset"
-  `(progn (insert (vh-indent-n ,level ,@text-list))
-	  (insert "\n"))) 
+  "Inserts a list of lines, and indents each by level*vhdl-basic-offset+current indentation"
+  (let ((current-indent (make-string  (- (point) (line-beginning-position)) ?\s)))
+    `(progn (beginning-of-line)
+	    (insert 
+	     (mapconcat (lambda (line) (concat ,current-indent line))
+			(split-string (vh-indent-n ,level ,@text-list) "\n")
+			"\n"))
+	    (insert "\n"))))
 
 (defun vh-kill-line-re (first &optional last)
   "Kills the line where re first is matched.  If last is specified, all lines between where
@@ -286,14 +293,10 @@ by level*vhdl-basic-offset.  Each string argument is considered a seperate line.
 generated for each string in values." 
   (vh-indent-n 0 
 	     (concat "CASE " variable " IS")
-	     (if values (vh-indent-n 1 (vh-when-template values)))
+	     (if values 
+		 (vh-indent-n 1 (mapconcat (lambda (v) (concat "WHEN " v " =>")) 
+					   values "\n")))
 	     "END CASE;"))
-
-(defun vh-when-template (values)
-  "Generates a when statement for each string in values." 
-  (vh-indent-n 0
-	       (mapconcat (lambda (v) (concat "WHEN " v " =>")) 
-			  values "\n")))
 
 (defun vh-else-template (clause-list)
   "Generates a sequence of ELSIF/ELSE statements. Helper for vh-if-template"
@@ -315,4 +318,3 @@ to generate an ELSE statement"
     (vh-indent-n 0 (concat "IF " (car if-clause) " THEN")
 		 (vh-indent-n 1 (cdr if-clause))
 		 (vh-else-template clause-list)))
-
